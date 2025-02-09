@@ -1,9 +1,17 @@
 import {useEffect, useState} from "react";
-import axios from 'axios';
+import phoneServices from './services/phone.js'
 
+
+const DeleteBtn = ({name}) => {
+    return (
+        <button onClick={() => {
+            phoneServices.remove(name)
+        }}>Delete</button>
+    )
+}
 const Number = ({name, number}) => (
     <p>
-        {name}: {number}
+        {name}: {number} <DeleteBtn name={name}/>
     </p>
 );
 
@@ -68,13 +76,11 @@ const Filter = ({searchValue, onChange}) => (
 const App = () => {
     const [persons, setPersons] = useState([]);
     const [searchValue, setSearchValue] = useState("");
-
+    console.log({persons}, 0)
     useEffect(() => {
-        axios
-            .get('http://localhost:3001/persons')
-            .then((res) => {
-                setPersons(res.data)
-            })
+        phoneServices.getAll().then((res) => {
+            setPersons(res)
+        })
     }, [])
 
     const handleAdd = (newPerson) => {
