@@ -1,111 +1,97 @@
 import {useEffect, useState} from "react";
-import phoneServices from './services/phone.js'
+import phoneServices from "./services/phone.js";
 
-
-const DeleteBtn = ({name}) => {
-    return (
-        <button onClick={() => {
-            phoneServices.remove(name)
-        }}>Delete</button>
-    )
-}
-const Number = ({name, number}) => (
+const Contact = ({person, onDelete}) => (
     <p>
-        {name}: {number} <DeleteBtn name={name}/>
+        {person.name}: {person.number}{" "}
+        <button onClick={() => onDelete(person.id)}>Delete</button>
     </p>
 );
 
-const Contacts = ({people}) => (
-    <div>
-        {people.map((person) => (
-            <Number key={person.name} name={person.name} number={person.number}/>
-        ))}
-    </div>
+const Contacts = ({people, onDelete}) => (
+    <div>{people.map((p) => <Contact key={p.id} person={p} onDelete={onDelete}/>)}</div>
 );
 
-const LaForm = ({onAdd}) => {
+const LaForm = ({persons, setPersons}) => {
     const [form, setForm] = useState({name: "", number: ""});
 
-    const handleChange = ({target}) => {
-        const {name, value} = target;
-        setForm((prev) => ({...prev, [name]: value}));
-    };
+    const handleChange = (e) =>
+        setForm((prev) => ({...prev, [e.target.name]: e.target.value}));
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!form.name.trim() || !form.number.trim()) return;
 
-        onAdd(form);
-        setForm({name: "", number: ""}); // Reset form
+        const name = form.name.trim();
+        const number = form.number.trim();
+        if (!name || !number) return;
+
+        const existingPerson = persons.find((p) => p.name === name);
+
+        try {
+            if (existingPerson) {
+                if (!window.confirm(`${name} is already in the phonebook, replace the old number?`)) return;
+
+                const updatedPerson = {...existingPerson, number};
+                const updatedData = await phoneServices.update(existingPerson.id, updatedPerson);
+
+                setPersons((prev) => prev.map((p) => (p.id === updatedData.id ? updatedData : p)));
+            } else {
+                const newPerson = await phoneServices.create({name, number});
+                setPersons((prev) => [...prev, newPerson]);
+            }
+
+            setForm({name: "", number: ""});
+        } catch (error) {
+            console.error("Operation failed:", error);
+        }
     };
 
     return (
         <form onSubmit={handleSubmit}>
-            <div>
-                <input
-                    type="text"
-                    name="name"
-                    placeholder="Name"
-                    value={form.name}
-                    onChange={handleChange}
-                    required
-                />
-            </div>
-            <div>
-                <input
-                    type="tel"
-                    name="number"
-                    placeholder="Phone Number"
-                    value={form.number}
-                    onChange={handleChange}
-                    required
-                />
-            </div>
+            <input name="name" placeholder="Name" value={form.name} onChange={handleChange} required/>
+            <input name="number" placeholder="Phone Number" value={form.number} onChange={handleChange} required/>
             <button type="submit">Add</button>
         </form>
     );
 };
 
-const Filter = ({searchValue, onChange}) => (
-    <>
-        filter shown with{" "}
-        <input value={searchValue} onChange={({target}) => onChange(target.value)}/>
-    </>
-);
-
 const App = () => {
     const [persons, setPersons] = useState([]);
     const [searchValue, setSearchValue] = useState("");
-    console.log({persons}, 0)
+
     useEffect(() => {
-        phoneServices.getAll().then((res) => {
-            setPersons(res)
-        })
-    }, [])
+        phoneServices.getAll().then(setPersons).catch((err) => console.error("Failed to fetch contacts:", err));
+    }, []);
 
-    const handleAdd = (newPerson) => {
-        if (persons.some((p) => p.name === newPerson.name)) {
-            alert(`${newPerson.name} is already in the phonebook.`);
-            return;
+    const handleDelete = async (id) => {
+        const person = persons.find((p) => p.id === id);
+        if (!person || !window.confirm(`Delete ${person.name}?`)) return;
+
+        try {
+            await phoneServices.remove(id);
+            setPersons((prev) => prev.filter((p) => p.id !== id));
+        } catch (error) {
+            console.error("Delete failed:", error);
         }
-
-        setPersons([...persons, newPerson]);
     };
-
-    const filteredPersons = persons.filter((p) =>
-        p.name.toLowerCase().includes(searchValue.toLowerCase())
-    );
+    const handleFilter = (e) => {
+        setSearchValue(e.target.value)
+    }
 
     return (
         <div>
             <h1>Phonebook</h1>
-            <Filter searchValue={searchValue} onChange={setSearchValue}/>
+            <Filter searchValue={searchValue} handleFilter={handleFilter}/>
             <h2>Add New</h2>
-            <LaForm onAdd={handleAdd}/>
+            <LaForm persons={persons} setPersons={setPersons}/>
             <h2>Numbers</h2>
-            <Contacts people={filteredPersons}/>
+            <Contacts people={persons.filter((p) => p.name.toLowerCase().includes(searchValue.toLowerCase()))}
+                      onDelete={handleDelete}/>
         </div>
     );
 };
 
+const Filter = ({searchValue, handleFilter}) => {
+    return <input placeholder="Filter" value={searchValue} onChange={handleFilter}/>
+}
 export default App;
