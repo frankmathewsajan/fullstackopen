@@ -6,17 +6,26 @@ const App = () => {
     const [notes, setNotes] = useState([])
     const [newNote, setNewNote] = useState('')
     const [showAll, setShowAll] = useState(true)
+    const [errorMessage, setErrorMessage] = useState(null)
 
     const toggleImportanceOf = id => {
         const note = notes.find(n => n.id === id)
         const changedNote = {...note, important: !note.important}
 
-        noteService.update(id, changedNote).then(response => {
-            setNotes(notes.map(n => n.id === id ? response : n))
-        }).catch(() => {
-            alert(`the note '${note.content}' was already deleted from server`)
-            setNotes(notes.filter(n => n.id !== id))
+        noteService
+            .update(id, changedNote).then(returnedNote => {
+            setNotes(notes.map(note => note.id !== id ? note : returnedNote))
         })
+            .catch(() => {
+
+                setErrorMessage(
+                    `Note '${note.content}' was already removed from server`
+                )
+                setTimeout(() => {
+                    setErrorMessage(null)
+                }, 5000)
+                setNotes(notes.filter(n => n.id !== id))
+            })
     }
 
     useEffect(() => {
@@ -40,12 +49,15 @@ const App = () => {
     const handleNoteChange = ({target}) => {
         setNewNote(target.value)
     }
+
+
     const notesToShow = showAll
         ? notes
         : notes.filter(note => note.important === true)
     return (
         <div>
             <h1>Notes</h1>
+            <Notification message={errorMessage}/>
             <button onClick={() => setShowAll(!showAll)}>
                 show {showAll ? 'important' : 'all'}
             </button>
@@ -60,8 +72,33 @@ const App = () => {
                 <input value={newNote} onChange={handleNoteChange} placeholder='new note...'/>
                 <button type='submit'>add</button>
             </form>
+            <Footer/>
+        </div>
+    )
+}
+const Notification = ({message}) => {
+    if (message === null) {
+        return null
+    }
+
+    return (
+        <div className='error'>
+            {message}
         </div>
     )
 }
 
+const Footer = () => {
+  const footerStyle = {
+    color: 'green',
+    fontStyle: 'italic',
+    fontSize: 16
+  }
+  return (
+    <div style={footerStyle}>
+      <br />
+      <em>Note app, Department of Computer Science, University of Helsinki 2024</em>
+    </div>
+  )
+}
 export default App
