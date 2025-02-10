@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
+import log from "eslint-plugin-react/lib/util/log.js";
+const api_key = import.meta.env.VITE_W_KEY
 
 const SearchBar = ({ search, setSearch, setMessage }) => {
     return (
@@ -20,7 +22,7 @@ const Matches = ({ result, message, setCountry }) => {
         <ul>
             {result.map((c, index) => (
                 <li key={index}>{c.name.common}&nbsp;
-                    <button onClick={() => setCountry(prev => ({ ...prev, name: c.name.common }))}>Show</button>
+                    <button onClick={() => setCountry({ name: c.name.common, details: null, weather: null })}>Show</button>
                 </li>
             ))}
         </ul>
@@ -42,19 +44,28 @@ const CountryDetails = ({ country }) => {
                 ))}
             </ul>
             <img src={country.details.flags?.png} alt={`Flag of ${country.details.name?.common}`} width="100" />
+
+            {country.weather && (
+                <div>
+                    <h3>Weather in {country.details.capital}</h3>
+                    <p>Temperature: {country.weather.main.temp} °C</p>
+                    <p>Weather: {country.weather.weather[0].description}</p>
+                    <img src={`https://openweathermap.org/img/wn/${country.weather.weather[0].icon}.png`} alt="weather icon" />
+                    <p>Wind : {country.weather.wind.speed} m/s</p>
+                </div>
+            )}
         </div>
     );
 };
 
 function App() {
     const [search, setSearch] = useState('');
-    const [country, setCountry] = useState({ name: null, details: null });
+    const [country, setCountry] = useState({ name: null, details: null, weather: null });
     const [message, setMessage] = useState('No Match Found');
     const [allCountries, setAllCountries] = useState([]);
     const [filteredCountries, setFilteredCountries] = useState([]);
 
     useEffect(() => {
-        console.log('Fetching all countries...');
         axios
             .get(`https://studies.cs.helsinki.fi/restcountries/api/all`)
             .then(response => {
@@ -69,11 +80,20 @@ function App() {
 
     useEffect(() => {
         if (country.name) {
-            console.log(`Fetching details of ${country.name}`);
             axios
                 .get(`https://studies.cs.helsinki.fi/restcountries/api/name/${country.name}`)
                 .then(response => {
                     setCountry(prev => ({ ...prev, details: response.data }));
+                    if (response.data.capital) {
+                        axios
+                            .get(`https://api.openweathermap.org/data/2.5/weather?q=${response.data.capital}&appid=${api_key}`)
+                            .then(weatherResponse => {
+                                setCountry(prev => ({ ...prev, weather: weatherResponse.data }));
+                            })
+                            .catch(error => {
+                                console.error('Error fetching weather:', error);
+                            });
+                    }
                 })
                 .catch(error => {
                     console.error('Error fetching country details:', error);
@@ -83,8 +103,8 @@ function App() {
 
     useEffect(() => {
         if (search) {
-            const filtered = allCountries.filter(country =>
-                country.name.common.toLowerCase().includes(search.toLowerCase())
+            const filtered = allCountries.filter(c =>
+                c.name.common.toLowerCase().includes(search.toLowerCase())
             );
             setFilteredCountries(filtered);
             setMessage(filtered.length === 0 ? 'No Match Found' : '');
