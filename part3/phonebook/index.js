@@ -1,7 +1,14 @@
 const express = require('express')
 const app = express()
+const morgan = require('morgan')
+
 app.use(express.json())
 
+morgan.token('body', (req) => {
+    return req.method === 'POST' ? JSON.stringify(req.body) : ''
+})
+
+app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
 
 let persons = [
     {
@@ -30,10 +37,9 @@ app.get('/', (request, response) => {
     response.send('<h1>Hello World!</h1>')
 })
 
-
 app.get('/info', (request, response) => {
     const date = new Date();
-    response.send(`<p>Phonebook has info for ${persons.length} people ${generateId()}</p><p>${date}</p>`)
+    response.send(`<p>Phonebook has info for ${persons.length} people</p><p>${date}</p>`)
 })
 
 app.get('/api/persons', (request, response) => {
@@ -42,8 +48,7 @@ app.get('/api/persons', (request, response) => {
 
 app.get('/api/persons/:id', (request, response) => {
     const id = request.params.id
-    const person = persons.find(person => (person.id) === id)
-
+    const person = persons.find(person => person.id === id)
 
     if (person) {
         response.json(person)
@@ -58,9 +63,11 @@ app.delete('/api/persons/:id', (request, response) => {
 
     response.status(204).end()
 })
+
 const generateId = () => {
     return String(Math.floor(Math.random() * (899998) + 100000))
 }
+
 app.post('/api/persons', (request, response) => {
     const body = request.body
     if (!body.name || !body.number) {
@@ -69,9 +76,8 @@ app.post('/api/persons', (request, response) => {
         })
     }
     const names = persons.map((person) => person.name)
-    console.log(names, body.name)
-    if (names.includes(body.name)) {
 
+    if (names.includes(body.name)) {
         return response.status(400).json({
             error: 'name must be unique'
         })
@@ -92,4 +98,3 @@ const PORT = 3001
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`)
 })
-
