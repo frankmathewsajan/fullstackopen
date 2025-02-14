@@ -6,6 +6,13 @@ const app = express()
 app.use(express.json())
 app.use(cors())
 
+app.use(cors({
+        origin: "http://51.21.181.130:5173", // Allow only this frontend
+        methods: ["GET", "POST", "PUT", "DELETE"],
+        allowedHeaders: ["Content-Type"],
+    })
+)
+
 let notes = [
     {
         id: "1",
@@ -80,5 +87,5 @@ app.post('/api/notes', (request, response) => {
 const PORT = 3001
 const HOST = "0.0.0.0";
 app.listen(PORT, HOST, () => {
-  console.log(`Server is running at http://${HOST}:${PORT}`);
+    console.log(`Server is running at http://${HOST}:${PORT}`);
 });
