@@ -4,7 +4,7 @@ import './index.css'
 
 
 axios
-    .get('http://localhost:3001/notes')
+    .get('http://localhost:3001/api/notes')
     .then((res) => {
         console.log(res.data)
     })
