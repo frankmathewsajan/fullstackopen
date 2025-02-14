@@ -2,7 +2,7 @@ import axios from 'axios'
 
 const useAWS = true
 const host = useAWS ? `51.21.181.130` : '127.0.0.1'
-const baseUrl = `http://${host}/api/notes`
+const baseUrl = `http://${host}:3001/api/notes`
 
 const getAll = () => {
     return axios.get(baseUrl).then(res => res.data)
